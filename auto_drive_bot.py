@@ -56,18 +56,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         subprocess.run(["gdown", "--folder", folder_url, "--output", DOWNLOAD_DIR], check=True)
 
-        # Automatically detect the downloaded folder (gdown names it based on original folder name)
-        downloaded_folders = os.listdir(DOWNLOAD_DIR)
-        if not downloaded_folders:
-            await update.message.reply_text("❌ Failed to download. No folder found.")
+        # Detect if content was saved as a folder or directly in DOWNLOAD_DIR
+        downloaded_items = os.listdir(DOWNLOAD_DIR)
+        if not downloaded_items:
+            await update.message.reply_text("❌ Failed to download. Nothing found.")
             logging.error("Download directory is empty.")
             return
 
-        folder_path = os.path.join(DOWNLOAD_DIR, downloaded_folders[0])
-        if not os.path.isdir(folder_path):
-            await update.message.reply_text("❌ The downloaded content is not a folder.")
-            logging.error("Downloaded content is not a folder.")
-            return
+        first_item = os.path.join(DOWNLOAD_DIR, downloaded_items[0])
+        folder_path = first_item if os.path.isdir(first_item) else DOWNLOAD_DIR
 
         for filename in os.listdir(folder_path):
             file_path = os.path.join(folder_path, filename)
