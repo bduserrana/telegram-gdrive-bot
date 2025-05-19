@@ -55,7 +55,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         subprocess.run(["gdown", "--folder", folder_url, "--output", DOWNLOAD_DIR], check=True)
-        folder_path = os.path.join(DOWNLOAD_DIR, folder_id)
+
+        # Automatically detect the downloaded folder (gdown names it based on original folder name)
+        downloaded_folders = os.listdir(DOWNLOAD_DIR)
+        if not downloaded_folders:
+            await update.message.reply_text("❌ Failed to download. No folder found.")
+            logging.error("Download directory is empty.")
+            return
+
+        folder_path = os.path.join(DOWNLOAD_DIR, downloaded_folders[0])
+        if not os.path.isdir(folder_path):
+            await update.message.reply_text("❌ The downloaded content is not a folder.")
+            logging.error("Downloaded content is not a folder.")
+            return
 
         for filename in os.listdir(folder_path):
             file_path = os.path.join(folder_path, filename)
@@ -72,7 +84,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     logging.info(f"Sent file: {filename} to chat_id: {chat_id}")
 
         await update.message.reply_text("✅ All files sent!")
-        # Clean up after sending
         subprocess.run(["rm", "-rf", folder_path])
         logging.info(f"Deleted folder: {folder_path}")
 
@@ -82,9 +93,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # === Main Entry ===
 def main():
-    # Start web UI thread
     threading.Thread(target=start_web_ui, daemon=True).start()
-
     application = Application.builder().token(BOT_TOKEN).build()
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     print("🤖 Bot is running. Send it a Google Drive folder link...")
